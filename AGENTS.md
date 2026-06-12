@@ -57,6 +57,9 @@ pocs/
 
 ### 2단계 — 데이터 파악 및 검증
 
+> **Skill 로드**: 데이터 품질 검증 시 `data-quality` Skill을 참조한다.
+> Read: `%CORTEX_CODE_SKILLS_PATH%\data-quality\SKILL.md`
+
 아래 순서로 진행한다.
 
 ```
@@ -79,14 +82,14 @@ pocs/
 
 **`CONTEXT.md` 의 목표 아웃풋 체크리스트만 보고 작업 목록을 결정한다.**
 
-| 아웃풋 | 저장 위치 | 핵심 고려사항 |
-|--------|---------|------------|
-| Semantic View | `outputs/semantic-view.sql` | 비즈니스 용어 반영, 2단계 table-descriptions 기반 |
-| Cortex Analyst | `outputs/cortex-analyst.md` | Semantic View 가 선행되어야 함 |
-| Cortex Search | `outputs/cortex-search.md` | 검색 대상 컬럼, chunking 전략 명시 |
-| Cortex Agent | `outputs/cortex-agent.md` | 사용할 Tool 목록 (Analyst / Search / SQL) 명시 |
-| Snowflake Intelligence | `outputs/snowflake-intelligence.md` | Agent 구성 기반 |
-| Streamlit Dashboard | `outputs/streamlit-dashboard.py` | 고객이 요청한 시각화 항목 기반 |
+| 아웃풋 | 저장 위치 | 시작 전 로드할 Skill |
+|--------|---------|-------------------|
+| Semantic View | `outputs/semantic-view.sql` | `semantic-view\SKILL.md` |
+| Cortex Analyst | `outputs/cortex-analyst.md` | `semantic-view\SKILL.md` (Analyst는 Semantic View의 하위 워크플로우) |
+| Cortex Search | `outputs/cortex-search.md` | — (docs/references/cortex-search-llms.txt 참조) |
+| Cortex Agent | `outputs/cortex-agent.md` | `cortex-agent\SKILL.md` |
+| Snowflake Intelligence | `outputs/snowflake-intelligence.md` | `cortex-agent\SKILL.md` (SI는 Agent 기반) |
+| Streamlit Dashboard | `outputs/streamlit-dashboard.py` | `developing-with-streamlit-in-snowflake\SKILL.md` |
 
 아웃풋 간 의존 관계:
 ```
@@ -163,7 +166,51 @@ SHOW TABLES IN SCHEMA <db>.<schema>;
 
 ---
 
-## 5. 공통 규칙
+## 5. Cortex Code Skills 활용
+
+로컬에 설치된 Cortex Code가 제공하는 Skills를 각 단계에서 참조한다.
+Skills는 Cortex Code 전용이 아니며, SKILL.md를 Read 툴로 읽고 지침을 그대로 따르면 된다.
+
+### Skills 경로
+```
+C:\Users\USER\AppData\Local\Programs\Cortex Code\resources\app\resources\snowflake\skills\cortex-code-skills\
+```
+
+### PoC에서 사용하는 Skills 목록
+
+| Skill 디렉토리 | 언제 사용 |
+|--------------|---------|
+| `semantic-view` | Semantic View 생성 / 최적화 / 디버그 / VQR 생성 |
+| `cortex-agent` | Cortex Agent 생성 / 수정 / 테스트 / 디버그 |
+| `data-quality` | 2단계 데이터 품질 검증 (DMF 기반 또는 ad-hoc) |
+| `developing-with-streamlit-in-snowflake` | Streamlit 앱 개발 및 배포 |
+
+### 사용 방법
+
+```
+1. Read 툴로 해당 Skill의 SKILL.md 를 읽는다
+   예) Read: C:\Users\USER\AppData\Local\Programs\Cortex Code\...\semantic-view\SKILL.md
+2. SKILL.md 의 "When to Use" 와 워크플로우를 확인한다
+3. 필요한 하위 SKILL.md 가 있으면 순서대로 추가로 읽는다
+4. 지침을 따르되, 아래 규칙으로 도구를 변환한다
+```
+
+### 도구 변환 규칙
+
+| Cortex Code (SKILL.md 원문) | Claude Code (실제 사용) |
+|---------------------------|----------------------|
+| `snowflake_sql_execute("SQL")` | `snow sql -q "SQL"` |
+| `uv run python <script>` | 동일 (`uv` 사용 가능) |
+| `create_file(path, content)` | Write 툴 |
+| `read_file(path)` | Read 툴 |
+
+### 주의사항
+- SKILL.md 가 "사용자 확인(✋ CHECKPOINT)" 을 요구하는 지점에서는 반드시 멈추고 사용자에게 확인한다
+- Skill이 Stage 업로드나 DDL 실행을 요구할 경우, 공통 규칙의 "파괴적 작업 사전 확인" 원칙을 우선 적용한다
+
+---
+
+## 6. 공통 규칙
 
 - **계획 우선**: `exec-plans/active/` 에 계획이 없으면 작업을 시작하지 않는다
 - **범위 준수**: `CONTEXT.md` 에 없는 아웃풋은 만들지 않는다. 필요하다고 판단되면 사용자에게 먼저 확인한다

@@ -44,6 +44,17 @@ pocs/
 └── <회사명>/                     ← 실제 PoC (_template 복사 후 진행)
 ```
 
+## Cortex Code Skills
+로컬에 설치된 Cortex Code가 제공하는 Skills를 PoC 작업에 활용한다.
+SKILL.md는 단계별 워크플로우 지침이며, Claude Code도 동일하게 읽고 따를 수 있다.
+
+```
+CORTEX_CODE_SKILLS_PATH=C:\Users\USER\AppData\Local\Programs\Cortex Code\resources\app\resources\snowflake\skills\cortex-code-skills
+```
+
+**적용 규칙**: SKILL.md 내 `snowflake_sql_execute(...)` 는 `snow sql -q "..."` 로 대체한다.
+**로드 방법**: Read 툴로 해당 경로의 `SKILL.md` 를 읽고 지침을 따른다.
+
 ## 행동 원칙
 - 실행 계획 없이 작업을 시작하지 않는다
 - `CONTEXT.md` 의 목표 아웃풋에 없는 항목은 만들지 않는다
