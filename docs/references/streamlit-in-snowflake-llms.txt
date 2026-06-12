@@ -1,0 +1,80 @@
+SOURCE: https://docs.snowflake.com/en/developer-guide/streamlit/about-streamlit
+
+# Streamlit in Snowflake (SiS)
+
+## Overview
+Build, deploy, and share Python web apps directly on Snowflake's data cloud.
+No data movement — processes data inside Snowflake without external systems.
+
+## Key Features
+- Managed infrastructure (Snowflake handles compute/storage)
+- RBAC-integrated security (source code stored as Snowflake objects)
+- Two runtime options: Warehouse runtime or Container runtime
+- Native integration with Snowpark, UDFs, stored procedures
+- Side-by-side editor + preview in Snowsight
+
+## Use Cases (PoC context)
+- Custom dashboards and data visualization
+- Data exploration and analysis tools
+- ML/AI application interfaces (Cortex Analyst, Cortex Search chat UI)
+- Interactive BI interfaces
+
+## Deployment via Snow CLI
+# streamlit.yml 필요 (프로젝트 루트)
+snow streamlit deploy
+snow streamlit deploy --replace
+snow streamlit get-url <app_name>
+
+## streamlit.yml Example
+definition_version: "2"
+entities:
+  my_app:
+    type: streamlit
+    identifier:
+      name: MY_STREAMLIT_APP
+    stage: my_streamlit_stage
+    main_file: app.py
+    title: "My PoC Dashboard"
+    query_warehouse: COMPUTE_WH
+
+## Connecting to Snowflake inside the App
+import streamlit as st
+from snowflake.snowpark.context import get_active_session
+
+session = get_active_session()
+
+# Query data
+df = session.sql("SELECT * FROM orders LIMIT 100").to_pandas()
+st.dataframe(df)
+
+## Calling Cortex Analyst from SiS
+import requests, json
+from snowflake.snowpark.context import get_active_session
+
+def call_cortex_analyst(question: str, semantic_model: str):
+    session = get_active_session()
+    token = session.connection.rest.token
+    host = session.connection.host
+
+    response = requests.post(
+        f"https://{host}/api/v2/cortex/analyst/message",
+        headers={"Authorization": f"Snowflake Token=\"{token}\"",
+                 "Content-Type": "application/json"},
+        json={
+            "messages": [{"role": "user", "content": [{"type": "text", "text": question}]}],
+            "semantic_model": semantic_model
+        }
+    )
+    return response.json()
+
+## Important Limitations
+- Cortex Agents NOT supported with warehouse runtime → use container runtime
+- Package availability limited to Snowflake's approved package list (Anaconda channel)
+- No persistent local filesystem between sessions
+- External network access requires Network Rule configuration
+
+## Runtime Options
+| Runtime     | Use Case                               | Cortex Agents |
+|-------------|----------------------------------------|---------------|
+| Warehouse   | Standard dashboards, Cortex Analyst    | Not supported |
+| Container   | Custom packages, Cortex Agents         | Supported     |

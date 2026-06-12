@@ -1,0 +1,114 @@
+SOURCE: https://docs.snowflake.com/en/sql-reference/sql/create-semantic-view
+SOURCE: https://docs.snowflake.com/en/user-guide/views-semantic/overview
+
+# Snowflake Semantic View (SQL DDL)
+
+## Core Syntax
+CREATE [ OR REPLACE ] SEMANTIC VIEW [ IF NOT EXISTS ] <name>
+  TABLES ( logicalTable [ , ... ] )
+  [ RELATIONSHIPS ( relationshipDef [ , ... ] ) ]
+  [ FACTS ( factExpression [ , ... ] ) ]
+  [ DIMENSIONS ( dimensionExpression [ , ... ] ) ]
+  [ METRICS ( { metricExpression | windowFunctionMetricExpression } [ , ... ] ) ]
+  [ COMMENT = '<comment>' ]
+  [ AI_SQL_GENERATION '<instructions>' ]
+  [ AI_QUESTION_CATEGORIZATION '<instructions>' ]
+  [ AI_VERIFIED_QUERIES ( verifiedQuery [ , ... ] ) ]
+  [ [ WITH ] TAG ( tag_name = 'tag_value' [ , ... ] ) ]
+  [ COPY GRANTS ]
+
+## Constraint: at least one DIMENSIONS or METRICS clause required.
+## Clause order: TABLES → RELATIONSHIPS → FACTS → DIMENSIONS → METRICS
+
+## Logical Table
+logicalTable ::=
+  [ <table_alias> AS ] <table_name>
+  [ PRIMARY KEY ( <column_name> [ , ... ] ) ]
+  [ UNIQUE ( <column_name> [ , ... ] ) ]
+  [ WITH SYNONYMS = ( '<synonym>' [ , ... ] ) ]
+  [ COMMENT = '<comment>' ]
+  [ [ WITH ] TAG ( ... ) ]
+
+## Relationships
+relationshipDef ::=
+  [ <relationship_identifier> AS ]
+  <table_alias> ( <column_name> [ , ... ] )
+  REFERENCES
+  <ref_table_alias> [ ( <ref_column_name> [ , ... ] ) ]
+
+## Facts
+factExpression ::=
+  [ { PRIVATE | PUBLIC } ] <table_alias>.<fact_name>
+  [ LABELS = ( FILTER ) ]
+  AS <sql_expr>
+  [ WITH SYNONYMS = ( '<synonym>' [ , ... ] ) ]
+  [ COMMENT = '<comment>' ]
+
+## Dimensions
+dimensionExpression ::=
+  [ PUBLIC ] <table_alias>.<dimension_name>
+  [ LABELS = ( FILTER ) ]
+  AS <sql_expr>
+  [ WITH SYNONYMS = ( '<synonym>' [ , ... ] ) ]
+  [ COMMENT = '<comment>' ]
+  [ WITH CORTEX SEARCH SERVICE <service_name> [ USING <column_name> ] ]
+
+## Metrics
+metricExpression ::=
+  [ { PRIVATE | PUBLIC } ] <table_alias>.<metric_name>
+  [ USING ( <relationship_name> [ , ... ] ) ]
+  [ NON ADDITIVE BY (
+    <dimension> [ { ASC | DESC } ] [ NULLS { FIRST | LAST } ] [ , ... ]
+  ) ]
+  AS <sql_expr>
+  [ WITH SYNONYMS = ( '<synonym>' [ , ... ] ) ]
+  [ COMMENT = '<comment>' ]
+
+## Window Function Metrics
+windowFunctionMetricExpression ::=
+  [ { PRIVATE | PUBLIC } ] <table_alias>.<metric_name> AS
+  <window_function>( <metric> ) OVER (
+    [ PARTITION BY { <exprs> | EXCLUDING <dimensions> } ]
+    [ ORDER BY <exprs> [ ASC | DESC ] [ NULLS { FIRST | LAST } ] ]
+    [ <windowFrameClause> ]
+  )
+
+## Verified Queries
+verifiedQuery ::=
+  <verified_query_name> AS (
+    QUESTION '<question>'
+    [ VERIFIED_AT <timestamp> ]
+    [ ONBOARDING_QUESTION <boolean> ]
+    [ VERIFIED_BY '( <purpose> = <contact> )' ]
+    SQL '<verified_query>'
+  )
+
+## Example
+CREATE OR REPLACE SEMANTIC VIEW sales_sv
+  TABLES (
+    o AS mydb.myschema.orders PRIMARY KEY (order_id)
+      WITH SYNONYMS = ('purchases', 'transactions'),
+    c AS mydb.myschema.customers PRIMARY KEY (customer_id)
+  )
+  RELATIONSHIPS (
+    orders_to_customers AS o(customer_id) REFERENCES c(customer_id)
+  )
+  DIMENSIONS (
+    o.region          AS o.region        COMMENT = 'Sales region',
+    o.status          AS o.order_status,
+    c.segment         AS c.customer_segment
+  )
+  METRICS (
+    PUBLIC o.total_revenue AS SUM(o.amount)
+      WITH SYNONYMS = ('sales', 'revenue')
+      COMMENT = 'Total revenue from orders',
+    PUBLIC o.order_count AS COUNT(o.order_id)
+  )
+  AI_SQL_GENERATION 'Always filter canceled orders unless explicitly asked.';
+
+## Key Notes
+- Dimensions are always PUBLIC; facts/metrics can be PRIVATE or PUBLIC
+- Supports CREATE OR ALTER (modify without recreating)
+- LABELS = (FILTER) marks a dimension/fact as a WHERE-clause filter candidate
+- AI_SQL_GENERATION: freeform instruction to guide SQL generation behavior
+- Semantic Views are preferred over YAML stage files for new implementations

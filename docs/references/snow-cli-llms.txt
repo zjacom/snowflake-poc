@@ -1,0 +1,104 @@
+SOURCE: https://docs.snowflake.com/en/developer-guide/snowflake-cli/index
+SOURCE: https://docs.snowflake.com/en/developer-guide/snowflake-cli/command-reference/overview
+
+# Snowflake CLI (snow) Reference
+
+## Overview
+Open-source CLI for developer-centric Snowflake workloads.
+Install: https://docs.snowflake.com/en/developer-guide/snowflake-cli/installation/installation
+GitHub:  https://github.com/snowflakedb/snowflake-cli
+
+## Connection Setup
+# Test connection (reads from env vars or connections.toml)
+snow connection test
+
+# Environment variables (load from pocs/<company>/.env before running snow)
+SNOWFLAKE_ACCOUNT      # ex) abc12345.ap-northeast-1.aws
+SNOWFLAKE_USER
+SNOWFLAKE_PASSWORD
+SNOWFLAKE_ROLE
+SNOWFLAKE_WAREHOUSE
+SNOWFLAKE_DATABASE
+SNOWFLAKE_SCHEMA
+
+# Named connection (alternative to env vars)
+snow connection add
+snow connection list
+snow sql --connection <name> -q "SELECT 1"
+
+## SQL Execution
+# Inline query
+snow sql -q "SHOW DATABASES;"
+snow sql -q "SELECT CURRENT_ACCOUNT(), CURRENT_USER(), CURRENT_ROLE();"
+
+# From file
+snow sql -f path/to/query.sql
+
+# With variable substitution
+snow sql -q "SELECT * FROM &{table_name}" -D table_name=orders
+
+## Stage Management
+# List stage contents
+snow stage list-files @<stage_name>
+
+# Upload file to stage
+snow stage upload <local_file> @<stage_name>
+snow stage upload semantic_model.yaml @my_db.my_schema.my_stage
+
+# Download from stage
+snow stage get @<stage_name>/<file> <local_path>
+
+# Copy between stages
+snow stage copy @<src_stage>/<path> @<dst_stage>/<path>
+
+## Cortex
+snow cortex search list
+snow cortex search create
+
+## Streamlit
+# Deploy Streamlit app (requires streamlit.yml in project)
+snow streamlit deploy
+snow streamlit deploy --replace  # overwrite existing
+
+# Get app URL
+snow streamlit get-url <app_name>
+
+# Manage apps
+snow streamlit list
+snow streamlit drop <app_name>
+
+## Object Management
+# List objects
+snow object list table --database <db> --schema <schema>
+snow object list view
+snow object list schema
+
+# Describe object
+snow object describe table <table_name>
+
+# Drop object
+snow object drop table <table_name>
+
+## Git Integration
+snow git setup <repo_name>
+snow git fetch <repo_name>
+snow git list-branches <repo_name>
+
+## Useful PoC Queries via snow sql
+# 컨텍스트 파악
+snow sql -q "SELECT CURRENT_ACCOUNT(), CURRENT_USER(), CURRENT_ROLE(), CURRENT_WAREHOUSE();"
+snow sql -q "SHOW DATABASES;"
+snow sql -q "SHOW ROLES;"
+snow sql -q "SHOW WAREHOUSES;"
+
+# 스키마 및 테이블 목록
+snow sql -q "SHOW SCHEMAS IN DATABASE <db>;"
+snow sql -q "SHOW TABLES IN SCHEMA <db>.<schema>;"
+snow sql -q "DESCRIBE TABLE <db>.<schema>.<table>;"
+
+# 행 수 및 샘플
+snow sql -q "SELECT COUNT(*) FROM <table>;"
+snow sql -q "SELECT * FROM <table> LIMIT 10;"
+
+# Null 비율 확인
+snow sql -q "SELECT COUNT(*) - COUNT(<col>) AS null_count, COUNT(*) AS total FROM <table>;"

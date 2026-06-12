@@ -1,0 +1,161 @@
+SOURCE: https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst
+SOURCE: https://docs.snowflake.com/en/user-guide/views-semantic/semantic-view-yaml-spec
+
+# Snowflake Cortex Analyst
+
+## Overview
+Cortex Analyst is a fully-managed LLM-powered feature that converts natural language questions into SQL
+against structured Snowflake data. Uses Semantic Views (or legacy YAML stage files) as business metadata.
+
+Model selection order: Claude Sonnet 4.6 → Claude Sonnet 4.5 → GPT 4.1 → Arctic Text2SQL → Mistral/Llama
+
+## Required Roles
+- SNOWFLAKE.CORTEX_USER  (all Cortex features)
+- SNOWFLAKE.CORTEX_ANALYST_USER  (Analyst only)
+
+## Setup Steps
+1. Create a Semantic View (preferred) or upload YAML semantic model to a Snowflake Stage
+2. Grant RBAC access (USAGE on Semantic View or READ on Stage)
+3. Build application using REST API or Streamlit
+
+## REST API
+POST /api/v2/cortex/analyst/message
+Content-Type: application/json
+
+{
+  "messages": [
+    {"role": "user", "content": [{"type": "text", "text": "<question>"}]}
+  ],
+  "semantic_model_file": "@<db>.<schema>.<stage>/model.yaml",   // legacy
+  "semantic_model": "<db>.<schema>.<semantic_view_name>"         // preferred
+}
+
+Response includes: SQL query, natural language answer, confidence score
+
+## Monitoring
+SELECT * FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_ANALYST_USAGE_HISTORY;
+
+---
+
+# Semantic Views - YAML Specification (Cortex Analyst legacy model format)
+# Also applies to semantic_view YAML structure when uploading to Stage
+
+## Top-Level Structure
+name: <string>                          # Required
+description: <string>                   # Optional
+tables: [...]                          # Required
+relationships: [...]                   # Optional
+metrics: [...]                         # Optional (view-level derived metrics)
+verified_queries: [...]                # Optional
+custom_instructions: <string>          # Optional (legacy SQL guidance)
+module_custom_instructions:            # Optional (granular)
+  sql_generation: <string>
+  question_categorization: <string>
+tags: [...]                            # Optional
+
+## Tables
+tables:
+  - name: <string>                     # Required
+    description: <string>              # Optional
+    base_table:                        # Required
+        database: <string>
+        schema: <string>
+        table: <string>
+    dimensions: [...]
+    time_dimensions: [...]
+    facts: [...]
+    metrics: [...]
+    filters: [...]
+    tags: [...]
+
+## Dimensions
+dimensions:
+  - name: <string>                     # Required
+    synonyms: [<string>, ...]          # Optional
+    description: <string>              # Optional
+    expr: <SQL expression>             # Required
+    data_type: <data type>             # Required (VARCHAR, NUMBER, DATE, etc.)
+    unique: <boolean>                  # Optional, default false
+    is_enum: <boolean>                 # Optional (fixed value set)
+    cortex_search_service:             # Optional
+        service: <string>
+        literal_column: <string>
+        database: <string>
+        schema: <string>
+    labels: [filter]                   # Optional (mark as WHERE clause filter)
+    tags: [...]
+
+## Time Dimensions
+time_dimensions:
+  - name: <string>                     # Required
+    synonyms: [<string>, ...]          # Optional
+    description: <string>              # Optional
+    expr: <SQL expression>             # Required
+    data_type: <data type>             # Required
+    unique: <boolean>                  # Optional
+    sample_values: [...]               # Optional
+
+## Facts (row-level quantitative values)
+facts:
+  - name: <string>                     # Required
+    synonyms: [<string>, ...]          # Optional
+    description: <string>              # Optional
+    expr: <SQL expression>             # Required
+    data_type: <data type>             # Required
+    access_modifier: <public_access | private_access>  # Optional, default public_access
+    labels: [filter]                   # Optional
+    tags: [...]
+
+## Metrics (aggregated KPIs)
+metrics:
+  - name: <string>                     # Required
+    synonyms: [<string>, ...]          # Optional
+    description: <string>              # Optional
+    expr: <SQL expression>             # Required (SUM, AVG, COUNT, etc.)
+    access_modifier: <public_access | private_access>  # Optional
+    non_additive_dimensions:           # Optional (semi-additive)
+      - table: <string>
+        dimension: <string>
+        sort_direction: <ascending | descending>
+        null_order: <first | last>
+    using_relationships: [<rel_name>]  # Optional
+    tags: [...]
+
+## Relationships
+relationships:
+  - name: <string>                     # Required
+    left_table: <string>               # Required
+    right_table: <string>              # Required
+    relationship_columns:              # Required
+      - left_column: <string>
+        right_column: <string>
+# Note: join_type and relationship_type are automatically inferred
+
+## Filters
+# Option 1: Entity-level (recommended)
+dimensions:
+  - name: high_value
+    expr: loyalty_points > 100
+    labels: [filter]
+
+# Option 2: Standalone
+filters:
+  - name: <string>                     # Required
+    synonyms: [<string>, ...]
+    description: <string>
+    expr: <SQL boolean expression>     # Required
+
+## Verified Queries
+verified_queries:
+  - name: <string>                     # Required
+    question: <string>                 # Required (natural language)
+    sql: <string>                      # Required
+    verified_by: <string>              # Optional
+    verified_at: <int>                 # Optional (Unix timestamp)
+    use_as_onboarding_question: <boolean>  # Optional
+
+## Key Notes
+- Clause order matters: tables → relationships → facts → dimensions → metrics
+- Dimensions are always public; facts/metrics can be private
+- Semantic Views (SQL DDL) are preferred over YAML stage files for new implementations
+- Legacy YAML files go to: @<db>.<schema>.<stage>/model.yaml

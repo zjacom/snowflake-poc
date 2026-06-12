@@ -1,0 +1,79 @@
+SOURCE: https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents
+
+# Snowflake Cortex Agents
+
+## Overview
+Fully managed agentic platform within Snowflake.
+Reasons over a request → plans work → calls tools → executes code → generates response.
+No custom orchestration infrastructure required.
+
+## Reasoning Loop
+1. Plan   — parse request, split into subtasks, select tools
+2. Use    — call Cortex Analyst / Cortex Search / Code Execution / Custom Tools
+3. Reflect — evaluate result, decide to clarify / call another tool / respond
+
+## Available Tools
+| Tool               | Description |
+|--------------------|-------------|
+| Cortex Analyst     | SQL generation over structured data using Semantic Views |
+| Cortex Search      | Retrieve insights from unstructured sources |
+| Code Execution     | Python in isolated sandbox for data processing |
+| Data to Chart      | Generate visualizations from data |
+| Custom Tools       | Stored procedures and UDFs for backend integration |
+| Agent Skills       | Modular instruction bundles for task-specific capabilities |
+| MCP Connectors     | Connect to remote MCP servers (Jira, Salesforce, etc.) |
+| Web Search         | Real-time public internet queries (Brave Search, zero data retention) |
+
+## Required Roles
+- SNOWFLAKE.CORTEX_USER  (all Cortex features including Agents)
+- SNOWFLAKE.CORTEX_AGENT_USER  (Agents only)
+
+## Key Privileges
+- CREATE AGENT (on schema)
+- USAGE (on Cortex Search, databases, schemas, tables, agent)
+- MODIFY, MONITOR, OWNERSHIP (on agent)
+
+## Authentication Methods
+- Programmatic Access Tokens (PATs)
+- Key pair authentication (JWTs)
+- OAuth
+
+## Two Interaction Modes
+1. With Agent Object   — create reusable configured agent (recommended for production, CI/CD)
+2. Without Agent Object — pass config in each request (good for experimentation)
+
+## Agent Object Configuration
+- model: "auto" (recommended — automatically selects best available model)
+- tools: list of Cortex Analyst / Cortex Search / custom tool references
+- response instructions: guide agent behavior and tone
+- sample questions: onboarding guidance for end users
+
+## Threads
+- Persist conversation context across turns
+- Eliminates client-side state management
+- Tool names must be 1-64 characters; Semantic View names become tool names
+
+## Web Search Setup
+1. Snowsight → AI & ML → Agents → Settings
+2. Enable Web search toggle
+
+## Cost
+- Orchestration: token-based
+- Cortex Analyst: per token
+- Cortex Search: index size + persistence time
+- Warehouse compute: custom tool execution
+
+## Monitoring & Iteration
+- Agents emit events revealing reasoning steps
+- Collect end-user feedback (ratings + text) for refinement
+- Use native Snowflake monitoring features
+
+## Important Limitations
+- NOT supported in Streamlit in Snowflake (SiS) with warehouse runtime
+  → Use container runtime for SiS + Cortex Agents
+- LLM response accuracy is not guaranteed
+- Default user role required for calling/updating agents
+
+## Dependency Chain (PoC context)
+Semantic View → Cortex Analyst → Cortex Agent → Snowflake Intelligence
+Cortex Search ─────────────────↗

@@ -1,0 +1,92 @@
+SOURCE: https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview
+
+# Snowflake Cortex Search
+
+## Overview
+Cortex Search enables hybrid semantic + keyword search over Snowflake data with minimal setup.
+Primary use cases: RAG for chatbots, enterprise search experiences.
+Search method: vector search + keyword retrieval + semantic reranking.
+
+## Required Privileges
+- SNOWFLAKE.CORTEX_USER or SNOWFLAKE.CORTEX_EMBED_USER database role
+- CREATE CORTEX SEARCH SERVICE on schema
+- SELECT on source tables/views
+- USAGE on warehouse
+- Change tracking must be enabled on underlying tables
+
+## Setup Steps
+
+### 1. Prepare source data
+CREATE OR REPLACE TABLE support_transcripts (
+    transcript_text VARCHAR,
+    region          VARCHAR,
+    agent_id        VARCHAR
+);
+
+### 2. Create Search Service
+CREATE OR REPLACE CORTEX SEARCH SERVICE <service_name>
+  ON <search_column>                          -- text column to embed & search
+  ATTRIBUTES <filter_col1>, <filter_col2>     -- columns available for filtering
+  WAREHOUSE = <warehouse_name>
+  TARGET_LAG = '1 hour'                       -- refresh frequency
+  EMBEDDING_MODEL = 'snowflake-arctic-embed-l-v2.0'
+  AS (
+    SELECT <search_column>, <filter_cols>, <other_cols>
+    FROM <source_table>
+  );
+
+### 3. Grant Access
+GRANT USAGE ON CORTEX SEARCH SERVICE <service_name> TO ROLE <role>;
+
+## Query Methods
+
+### SQL (Preview)
+SELECT PARSE_JSON(
+  SNOWFLAKE.CORTEX.SEARCH_PREVIEW(
+      '<db>.<schema>.<service_name>',
+      '{
+        "query": "<natural language query>",
+        "columns": ["<col1>", "<col2>"],
+        "filter": {"@eq": {"region": "North America"}},
+        "limit": 10
+      }'
+  ))['results'] AS results;
+
+### Python (Snowpark)
+from snowflake.core import Root
+
+root = Root(session)
+svc = root.databases["db"].schemas["schema"].cortex_search_services["svc_name"]
+resp = svc.search(
+    query="<natural language query>",
+    columns=["col1", "col2"],
+    filter={"@eq": {"region": "North America"}},
+    limit=10
+)
+
+## Embedding Models
+| Model                              | Dims | Context | Language     |
+|------------------------------------|------|---------|--------------|
+| snowflake-arctic-embed-m-v1.5      | 768  | 512     | English      |
+| snowflake-arctic-embed-l-v2.0      | 1024 | 512     | Multilingual |
+| snowflake-arctic-embed-l-v2.0-8k   | 1024 | 8192    | Multilingual |
+| voyage-multilingual-2              | 1024 | 32000   | Multilingual |
+
+Default: snowflake-arctic-embed-m-v1.5
+
+## Key Concepts
+- TARGET_LAG: refresh frequency (incremental, only new/changed rows re-embedded)
+- ATTRIBUTES: columns available for filtering (not embedded, stored as metadata)
+- Recommended chunk size: ≤512 tokens (~385 English words)
+- Use SNOWFLAKE.CORTEX.COUNT_TOKENS() to estimate token count
+
+## Integrating with Semantic View (Cortex Analyst)
+-- In CREATE SEMANTIC VIEW, reference a Cortex Search service on a dimension:
+dimensionExpression ::=
+  <table_alias>.<dimension_name> AS <sql_expr>
+  WITH CORTEX SEARCH SERVICE <service_name> [ USING <column_name> ]
+
+## Limits
+- Max 100M rows per service (contact support to increase)
+- 20 QPS per service; 140 QPS account-wide
+- Active services incur cost regardless of query volume (GB/month of indexed data)
