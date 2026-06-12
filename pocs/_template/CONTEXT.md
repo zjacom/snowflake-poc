@@ -7,12 +7,8 @@
 - PoC 목표:
 
 ## Snowflake 연결
-- 자격증명: `.env` 파일 참조 (`.env.example` 복사 후 작성, git 커밋 금지)
-- Account:          # ex) abc12345.ap-northeast-1.aws
-- 기본 Role:
-- 기본 Warehouse:
-- 기본 Database:
-- 메모:             # ex) ACCOUNTADMIN 사용 불가, 고객이 별도 Role 생성 예정
+- 자격증명: `.env` 파일 (Account / User / Password / Role / Warehouse / Database 모두 거기서 관리)
+- 메모:   # ex) ACCOUNTADMIN 사용 불가, 고객이 별도 Role 생성 예정
 
 ## 데이터 소스 (1단계)
 - [ ] 파일 직접 수신 (CSV, JSON 등)

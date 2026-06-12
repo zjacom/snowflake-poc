@@ -6,11 +6,13 @@ Agent는 명확한 실행 계획을 기반으로 작업하고, 결과를 문서�
 
 ## Agent 시작 절차
 1. `AGENTS.md` 를 읽는다 — 하네스 구조 및 실행 규칙
-2. `pocs/<회사명>/CONTEXT.md` 에서 고객 정보와 목표 아웃풋을 확인한다
-3. `pocs/<회사명>/exec-plans/active/` 에서 현재 실행 계획을 확인한다
-4. 계획에 따라 작업을 수행한다
-5. 결과물은 `pocs/<회사명>/generated/` 에 저장한다
-6. 완료된 계획은 `pocs/<회사명>/exec-plans/completed/` 로 이동한다
+2. `pocs/<회사명>/STATUS.md` 를 읽는다 — 현재 진행 상태와 다음 액션 확인
+3. `pocs/<회사명>/CONTEXT.md` 에서 고객 정보와 목표 아웃풋을 확인한다
+4. `pocs/<회사명>/exec-plans/active/` 에서 현재 실행 계획을 확인한다
+5. 계획에 따라 작업을 수행한다
+6. 결과물은 `pocs/<회사명>/generated/` 에 저장한다
+7. 완료된 계획은 `pocs/<회사명>/exec-plans/completed/` 로 이동한다
+8. 작업 완료 후 `pocs/<회사명>/STATUS.md` 를 업데이트한다
 
 ## 디렉토리 구조
 ```
@@ -42,6 +44,7 @@ pocs/
 │           └── streamlit-dashboard.py
 │
 └── <회사명>/                     ← 실제 PoC (_template 복사 후 진행)
+    ├── STATUS.md                ← 진행 상태 요약 (사람용 대시보드, 에이전트가 매 작업 후 업데이트)
 ```
 
 ## Cortex Code Skills

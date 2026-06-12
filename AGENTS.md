@@ -122,8 +122,11 @@ Cortex Search ──────────────────↗
 ```powershell
 # pocs/<회사명>/.env 로드
 Get-Content "pocs/<회사명>/.env" | ForEach-Object {
-    if ($_ -match '^\s*([^#][^=]*?)\s*=\s*(.*)\s*$') {
-        [System.Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2].Trim())
+    if ($_ -match '^\s*([^#][^=]*?)\s*=\s*(.*)$') {
+        $key = $matches[1].Trim()
+        $val = $matches[2] -replace '\s*#.*$', '' # 인라인 주석 제거
+        $val = $val.Trim().Trim('"').Trim("'")     # 따옴표 제거
+        [System.Environment]::SetEnvironmentVariable($key, $val)
     }
 }
 ```
@@ -218,3 +221,8 @@ C:\Users\USER\AppData\Local\Programs\Cortex Code\resources\app\resources\snowfla
 - **파괴적 작업 사전 확인**: DDL(CREATE, DROP, ALTER), 데이터 삽입/삭제는 계획에 명시된 경우에만, 실행 전 사용자에게 확인한다
 - **불확실한 경우 중단**: 다음 단계가 불명확하거나 도메인 지식이 부족한 경우 추측하지 않고 사용자에게 질문한다
 - **결과물 경로**: 모든 생성 파일은 반드시 `pocs/<회사명>/generated/` 하위에 저장한다
+- **STATUS.md 업데이트**: 아래 시점에 반드시 `pocs/<회사명>/STATUS.md` 를 최신 상태로 유지한다
+  - 주요 작업 완료 시 (연결 확인, DDL 실행, 파일 생성 등)
+  - 블로커 발생 시 (사람이 해결해야 할 항목 기록)
+  - 단계 전환 시 (단계별 진행 현황 표 업데이트)
+  - 세션 종료 전 (다음 액션을 명확하게 기록)
